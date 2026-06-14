@@ -3,6 +3,7 @@ import { ClockInView } from './views/clockin.js';
 import { HistoryView } from './views/history.js';
 import { CalendarView } from './views/calendar.js';
 import { EmployeesView } from './views/employees.js';
+import { LoginView } from './views/login.js';
 import { Store } from './store.js';
 
 const ROUTES = {
@@ -10,7 +11,8 @@ const ROUTES = {
   clockin: ClockInView,
   history: HistoryView,
   calendar: CalendarView,
-  jobs: EmployeesView
+  jobs: EmployeesView,
+  login: LoginView
 };
 
 export const AppRouter = {
@@ -19,12 +21,10 @@ export const AppRouter = {
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
     window.addEventListener('DOMContentLoaded', () => {
-      // 確保至少有預設工作資料
-      Store.getJobs();
+      Store.getEmployees();
       this.handleRoute();
     });
 
-    // 綁定導覽列連結點擊
     document.querySelectorAll('[data-route]').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
@@ -40,10 +40,8 @@ export const AppRouter = {
 
   async handleRoute() {
     const hash = window.location.hash;
-    // 解析路徑，預設跳轉到打卡頁面
     let routeName = hash.replace(/^#\/?/, '').split('/')[0] || 'clockin';
 
-    // 如果是不存在的路由，預設回打卡頁
     if (!ROUTES[routeName]) {
       routeName = 'clockin';
     }
@@ -51,7 +49,36 @@ export const AppRouter = {
     // 1. 同步雲端資料庫最新資料
     await Store.syncFromCloud();
 
-    // 2. 更新頂部同步 Banner
+    // 2. 路由守衛 (Route Guard)
+    const session = Store.getSession();
+
+    if (!session.role) {
+      // 未登入，一律強制導向登入頁面
+      if (routeName !== 'login') {
+        routeName = 'login';
+        window.location.hash = '#/login';
+        return; // 終止本次路由，等待 hashchange 重新觸發
+      }
+    } else if (session.role === 'employee') {
+      // 員工身分：僅允許使用打卡頁，其他路由一律踢回打卡頁
+      if (routeName !== 'clockin') {
+        routeName = 'clockin';
+        window.location.hash = '#/clockin';
+        return;
+      }
+    }
+
+    // 3. 更新介面權限遮罩樣式 (員工身分或登入頁皆隱藏導覽列)
+    const appEl = document.getElementById('app');
+    if (appEl) {
+      if (session.role === 'employee' || routeName === 'login') {
+        appEl.classList.add('role-employee');
+      } else {
+        appEl.classList.remove('role-employee');
+      }
+    }
+
+    // 4. 更新頂部同步 Banner
     this.updateSyncBanner();
 
     const view = ROUTES[routeName];
@@ -61,7 +88,6 @@ export const AppRouter = {
     const mainContent = document.getElementById('main-content');
     if (mainContent) {
       mainContent.innerHTML = view.render();
-      // 執行視圖初始化邏輯
       view.init();
     }
 
@@ -83,7 +109,7 @@ export const AppRouter = {
       banner.innerHTML = `<i data-lucide="cloud" style="width: 15px; height: 15px; display: inline-block; vertical-align: text-bottom; margin-right: 0.3rem;"></i> 雲端即時同步模式已啟用 (Supabase) • 全體員工可各自以手機打卡，資料即時更新`;
     } else if (mode === 'local_server') {
       banner.style.display = 'block';
-      banner.style.backgroundColor = '#dbeafe'; // 淡藍色馬卡龍
+      banner.style.backgroundColor = '#dbeafe'; // 淡藍色
       banner.style.color = '#1e40af';
       banner.style.borderColor = 'rgba(191, 219, 254, 0.5)';
       banner.innerHTML = `<i data-lucide="wifi" style="width: 15px; height: 15px; display: inline-block; vertical-align: text-bottom; margin-right: 0.3rem;"></i> 店面 Wi-Fi 共享同步中 • 資料正即時儲存於您的 Mac 主機上 (資料庫免設定)`;
@@ -101,7 +127,6 @@ export const AppRouter = {
   },
 
   updateActiveNavLink(activeRoute) {
-    // 側邊欄與行動版導覽列連結
     const links = document.querySelectorAll('[data-route]');
     links.forEach(link => {
       const route = link.getAttribute('data-route');
@@ -114,7 +139,6 @@ export const AppRouter = {
   }
 };
 
-// 全域註冊以便跨組件導航
 window.AppRouter = AppRouter;
 
 AppRouter.init();

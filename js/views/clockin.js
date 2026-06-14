@@ -7,8 +7,16 @@ export const ClockInView = {
   render() {
     const employees = Store.getEmployees();
     const activeShifts = Store.getActiveShifts();
+    const session = Store.getSession();
 
-    // 1. 如果沒有建立任何員工，引導管理者先去新增員工
+    // 1. 如果沒有登入，將無法渲染 (正常路由守衛會攔截，此處做雙重保障)
+    if (!session.role) {
+      return `<div class="empty-state">請先登入系統</div>`;
+    }
+
+    const isAdmin = session.role === 'admin';
+
+    // 2. 如果沒有建立任何員工，引導管理者先去新增員工
     if (employees.length === 0) {
       return `
         <div class="view-header">
@@ -33,98 +41,162 @@ export const ClockInView = {
       `;
     }
 
-    // 2. 顯示所有員工的打卡監控卡片
-    const employeeCardsHtml = employees.map(emp => {
-      const activeShift = activeShifts[emp.id];
+    // 3. 分流渲染邏輯
+    let employeeCardsHtml = '';
+    let headerActionHtml = '';
+
+    if (isAdmin) {
+      // --- 管理者視角：顯示所有員工卡片 + 登出按鈕 ---
+      headerActionHtml = `
+        <button id="logout-btn" class="btn btn-secondary btn-sm" style="color: var(--color-danger); border-color: rgba(255,159,159,0.3);">
+          <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+          登出控制台
+        </button>
+      `;
+
+      employeeCardsHtml = employees.map(emp => {
+        const activeShift = activeShifts[emp.id];
+        const isOnDuty = !!activeShift;
+        const statusLabel = isOnDuty ? (activeShift.status === 'working' ? '工作中' : '休息中 (暫停計薪)') : '未上班';
+        const statusClass = isOnDuty ? (activeShift.status === 'working' ? 'working' : 'break') : '';
+        const cardColor = emp.color || '#E8DFF5';
+
+        return `
+          <div class="glass-card emp-clock-card" data-employee-id="${emp.id}" style="--job-color: ${cardColor}; border-left: 6px solid ${cardColor}; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 300px; opacity: ${isOnDuty ? '1' : '0.85'};">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+                <div>
+                  <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.1rem;">${emp.name}</h4>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${emp.role}</span>
+                </div>
+                <span class="status-badge ${statusClass}" style="margin-bottom: 0; padding: 0.3rem 0.7rem; font-size: 0.75rem; background: ${isOnDuty ? '' : 'rgba(0,0,0,0.05)'}; color: ${isOnDuty ? '' : 'var(--text-muted)'};">
+                  ${statusLabel}
+                </span>
+              </div>
+              <div class="clock-timer" id="timer-${emp.id}" style="font-size: 2.2rem; margin-bottom: 0.3rem; text-align: left; color: ${isOnDuty ? 'var(--text-main)' : 'var(--text-muted)'};">00:00:00</div>
+              <div class="live-earnings" style="justify-content: flex-start; margin-bottom: 1rem; font-size: 1.15rem;">
+                <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">結算薪資：</span>
+                <span class="live-earnings-num" id="earnings-${emp.id}" style="color: ${isOnDuty ? '#5aa16b' : 'var(--text-muted)'}; font-weight: 700;">$0</span>
+              </div>
+            </div>
+            <div style="margin-bottom: 1.5rem; opacity: ${isOnDuty ? '1' : '0.4'};">
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem;">
+                <span>薪資遞增進度條 (+ $50)</span>
+                <span id="progress-text-${emp.id}">已累積 0 分 0 秒 / 15 分</span>
+              </div>
+              <div style="width: 100%; height: 8px; background: rgba(0,0,0,0.05); border-radius: 99px; overflow: hidden; position: relative;">
+                <div id="progress-bar-${emp.id}" style="width: 0%; height: 100%; background: ${cardColor}; border-radius: 99px; transition: width 0.1s linear;"></div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+              <div style="display: flex; gap: 0.5rem; width: 100%;">
+                <button class="btn btn-secondary btn-sm emp-clockin-btn" data-id="${emp.id}" style="flex-grow: 1; padding: 0.6rem 0; font-weight: 700; background: ${isOnDuty ? '#f5f5f5' : 'rgba(214, 234, 216, 0.4)'}; color: ${isOnDuty ? 'var(--text-muted)' : '#2e6930'}; border: 1px solid ${isOnDuty ? 'transparent' : 'rgba(140, 216, 167, 0.5)'};" ${isOnDuty ? 'disabled' : ''}>
+                  <i data-lucide="play" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
+                  ${isOnDuty ? '已上班' : '上班打卡'}
+                </button>
+                <button class="btn btn-secondary btn-sm emp-clockout-btn" data-id="${emp.id}" style="flex-grow: 1; padding: 0.6rem 0; font-weight: 700; background: ${isOnDuty ? 'rgba(255, 159, 159, 0.25)' : '#f5f5f5'}; color: ${isOnDuty ? '#a83c3c' : 'var(--text-muted)'}; border: 1px solid ${isOnDuty ? 'rgba(255, 159, 159, 0.6)' : 'transparent'};" ${isOnDuty ? '' : 'disabled'}>
+                  <i data-lucide="log-out" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
+                  下班結算
+                </button>
+              </div>
+              ${isOnDuty ? `
+                <button class="btn btn-secondary btn-sm toggle-break-btn" data-id="${emp.id}" style="width: 100%; padding: 0.5rem 0; font-size: 0.8rem; background: #ffffff; border: 1px solid var(--border-light);">
+                  <i data-lucide="${activeShift.status === 'working' ? 'coffee' : 'chevron-right'}" style="width: 13px; height: 13px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
+                  ${activeShift.status === 'working' ? '點擊休息' : '結束休息，繼續工作'}
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      // --- 員工個人視角：僅顯示該登入員工的卡片，並提供「安全登出」 ---
+      const myId = session.userId;
+      const myEmp = employees.find(e => e.id === myId);
+      
+      if (!myEmp) {
+        // 容錯防護
+        Store.clearSession();
+        setTimeout(() => window.location.reload(), 100);
+        return '';
+      }
+
+      headerActionHtml = `
+        <button id="logout-btn" class="btn btn-secondary btn-sm">
+          <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+          登出 / 切換身分
+        </button>
+      `;
+
+      const activeShift = activeShifts[myId];
       const isOnDuty = !!activeShift;
       const statusLabel = isOnDuty ? (activeShift.status === 'working' ? '工作中' : '休息中 (暫停計薪)') : '未上班';
       const statusClass = isOnDuty ? (activeShift.status === 'working' ? 'working' : 'break') : '';
-      const cardColor = emp.color || '#E8DFF5';
+      const cardColor = myEmp.color || '#E8DFF5';
 
-      return `
-        <div class="glass-card emp-clock-card" data-employee-id="${emp.id}" style="--job-color: ${cardColor}; border-left: 6px solid ${cardColor}; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 300px; opacity: ${isOnDuty ? '1' : '0.85'};">
-          
-          <!-- 卡片頂部：名字與狀態 -->
+      employeeCardsHtml = `
+        <div class="glass-card emp-clock-card" data-employee-id="${myEmp.id}" style="--job-color: ${cardColor}; border-left: 6px solid ${cardColor}; padding: 2rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 350px; max-width: 500px; margin: 0 auto; opacity: 1;">
           <div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
               <div>
-                <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.1rem;">${emp.name}</h4>
-                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${emp.role}</span>
+                <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.2rem;">${myEmp.name}</h4>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">${myEmp.role}</span>
               </div>
-              <span class="status-badge ${statusClass}" style="margin-bottom: 0; padding: 0.3rem 0.7rem; font-size: 0.75rem; background: ${isOnDuty ? '' : 'rgba(0,0,0,0.05)'}; color: ${isOnDuty ? '' : 'var(--text-muted)'};">
+              <span class="status-badge ${statusClass}" style="margin-bottom: 0; padding: 0.4rem 0.8rem; font-size: 0.8rem; background: ${isOnDuty ? '' : 'rgba(0,0,0,0.05)'}; color: ${isOnDuty ? '' : 'var(--text-muted)'};">
                 ${statusLabel}
               </span>
             </div>
             
-            <!-- 大計時碼錶 -->
-            <div class="clock-timer" id="timer-${emp.id}" style="font-size: 2.2rem; margin-bottom: 0.3rem; text-align: left; color: ${isOnDuty ? 'var(--text-main)' : 'var(--text-muted)'};">
-              00:00:00
-            </div>
-            
-            <!-- 目前 15 分鐘薪資 -->
-            <div class="live-earnings" style="justify-content: flex-start; margin-bottom: 1rem; font-size: 1.15rem;">
-              <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">結算薪資：</span>
-              <span class="live-earnings-num" id="earnings-${emp.id}" style="color: ${isOnDuty ? '#5aa16b' : 'var(--text-muted)'}; font-weight: 700;">$0</span>
+            <div class="clock-timer" id="timer-${myEmp.id}" style="font-size: 3rem; margin-bottom: 0.5rem; text-align: left; color: ${isOnDuty ? 'var(--text-main)' : 'var(--text-muted)'};">00:00:00</div>
+            <div class="live-earnings" style="justify-content: flex-start; margin-bottom: 1.5rem; font-size: 1.35rem;">
+              <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500;">結算薪資：</span>
+              <span class="live-earnings-num" id="earnings-${myEmp.id}" style="color: ${isOnDuty ? '#5aa16b' : 'var(--text-muted)'}; font-weight: 700;">$0</span>
             </div>
           </div>
-
-          <!-- 卡片中部：15分鐘進度條與進度文字 -->
-          <div style="margin-bottom: 1.5rem; opacity: ${isOnDuty ? '1' : '0.4'};">
-            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem;">
+          <div style="margin-bottom: 2rem; opacity: ${isOnDuty ? '1' : '0.4'};">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">
               <span>薪資遞增進度條 (+ $50)</span>
-              <span id="progress-text-${emp.id}">已累積 0 分 0 秒 / 15 分</span>
+              <span id="progress-text-${myEmp.id}">已累積 0 分 0 秒 / 15 分</span>
             </div>
-            <div style="width: 100%; height: 8px; background: rgba(0,0,0,0.05); border-radius: 99px; overflow: hidden; position: relative;">
-              <div id="progress-bar-${emp.id}" style="width: 0%; height: 100%; background: ${cardColor}; border-radius: 99px; transition: width 0.1s linear;"></div>
+            <div style="width: 100%; height: 10px; background: rgba(0,0,0,0.05); border-radius: 99px; overflow: hidden; position: relative;">
+              <div id="progress-bar-${myEmp.id}" style="width: 0%; height: 100%; background: ${cardColor}; border-radius: 99px; transition: width 0.1s linear;"></div>
             </div>
           </div>
-
-          <!-- 卡片底部：上班跟下班按鈕分開 -->
-          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-            <div style="display: flex; gap: 0.5rem; width: 100%;">
-              <!-- 上班打卡按鈕 -->
-              <button class="btn btn-secondary btn-sm emp-clockin-btn" 
-                      data-id="${emp.id}" 
-                      style="flex-grow: 1; padding: 0.6rem 0; font-weight: 700; background: ${isOnDuty ? '#f5f5f5' : 'rgba(214, 234, 216, 0.4)'}; color: ${isOnDuty ? 'var(--text-muted)' : '#2e6930'}; border: 1px solid ${isOnDuty ? 'transparent' : 'rgba(140, 216, 167, 0.5)'}; cursor: ${isOnDuty ? 'default' : 'pointer'};"
-                      ${isOnDuty ? 'disabled' : ''}>
-                <i data-lucide="play" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
+          <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+            <div style="display: flex; gap: 0.8rem; width: 100%;">
+              <button class="btn btn-secondary emp-clockin-btn" data-id="${myEmp.id}" style="flex-grow: 1; padding: 0.9rem 0; font-size: 1.05rem; font-weight: 700; background: ${isOnDuty ? '#f5f5f5' : 'rgba(214, 234, 216, 0.5)'}; color: ${isOnDuty ? 'var(--text-muted)' : '#2e6930'}; border: 1px solid ${isOnDuty ? 'transparent' : 'rgba(140, 216, 167, 0.5)'};" ${isOnDuty ? 'disabled' : ''}>
+                <i data-lucide="play" style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
                 ${isOnDuty ? '已上班' : '上班打卡'}
               </button>
-
-              <!-- 下班結算按鈕 -->
-              <button class="btn btn-secondary btn-sm emp-clockout-btn" 
-                      data-id="${emp.id}" 
-                      style="flex-grow: 1; padding: 0.6rem 0; font-weight: 700; background: ${isOnDuty ? 'rgba(255, 159, 159, 0.25)' : '#f5f5f5'}; color: ${isOnDuty ? '#a83c3c' : 'var(--text-muted)'}; border: 1px solid ${isOnDuty ? 'rgba(255, 159, 159, 0.6)' : 'transparent'}; cursor: ${isOnDuty ? 'pointer' : 'default'};"
-                      ${isOnDuty ? '' : 'disabled'}>
-                <i data-lucide="log-out" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
+              <button class="btn btn-secondary emp-clockout-btn" data-id="${myEmp.id}" style="flex-grow: 1; padding: 0.9rem 0; font-size: 1.05rem; font-weight: 700; background: ${isOnDuty ? 'rgba(255, 159, 159, 0.35)' : '#f5f5f5'}; color: ${isOnDuty ? '#a83c3c' : 'var(--text-muted)'}; border: 1px solid ${isOnDuty ? 'rgba(255, 159, 159, 0.6)' : 'transparent'};" ${isOnDuty ? '' : 'disabled'}>
+                <i data-lucide="log-out" style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
                 下班結算
               </button>
             </div>
-
-            <!-- 休息切換按鈕 (僅在上班時顯示，點選切換狀態) -->
             ${isOnDuty ? `
-              <button class="btn btn-secondary btn-sm toggle-break-btn" 
-                      data-id="${emp.id}" 
-                      style="width: 100%; padding: 0.5rem 0; font-size: 0.8rem; background: #ffffff; border: 1px solid var(--border-light);">
-                <i data-lucide="${activeShift.status === 'working' ? 'coffee' : 'chevron-right'}" style="width: 13px; height: 13px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
+              <button class="btn btn-secondary toggle-break-btn" data-id="${myEmp.id}" style="width: 100%; padding: 0.8rem 0; font-size: 0.9rem; background: #ffffff; border: 1px solid var(--border-light);">
+                <i data-lucide="${activeShift.status === 'working' ? 'coffee' : 'chevron-right'}" style="width: 15px; height: 15px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
                 ${activeShift.status === 'working' ? '點擊休息' : '結束休息，繼續工作'}
               </button>
             ` : ''}
           </div>
         </div>
       `;
-    }).join('');
+    }
 
     return `
       <div class="view-header">
         <div>
           <h2 class="view-title">即時員工打卡</h2>
-          <p class="view-subtitle">全體員工一覽，獨立「上班」與「下班」打卡控制（15分鐘/50元）</p>
+          <p class="view-subtitle">${isAdmin ? '全體員工一覽，獨立「上班」與「下班」打卡控制（15分鐘/50元）' : '個人打卡系統'}</p>
+        </div>
+        <div>
+          ${headerActionHtml}
         </div>
       </div>
 
       <!-- 員工打卡監控面板 -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.8rem;">
+      <div style="${isAdmin ? 'display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.8rem;' : 'padding: 1rem 0;'}">
         ${employeeCardsHtml}
       </div>
 
@@ -182,6 +254,8 @@ export const ClockInView = {
       this.timerInterval = null;
     }
 
+    const logoutBtn = document.getElementById('logout-btn');
+
     // 模態框相關 DOM
     const clockoutModal = document.getElementById('clockout-modal');
     const modalCloseBtn = document.getElementById('modal-close-btn');
@@ -194,6 +268,17 @@ export const ClockInView = {
     const modalEmpEarnings = document.getElementById('modal-emp-earnings');
     const clockoutNote = document.getElementById('clockout-note');
 
+    // 登出按鈕事件
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        const confirmLogout = confirm('確定要登出並切換身分嗎？');
+        if (confirmLogout) {
+          Store.clearSession();
+          window.AppRouter.navigate('login');
+        }
+      });
+    }
+
     // 綁定各卡片的「上班打卡」按鈕
     const clockinBtns = document.querySelectorAll('.emp-clockin-btn');
     clockinBtns.forEach(btn => {
@@ -203,7 +288,7 @@ export const ClockInView = {
 
         const started = Store.startClockIn(empId);
         if (started) {
-          window.AppRouter.navigate('clockin'); // 重新載入畫面啟用計時器
+          window.AppRouter.navigate('clockin');
         }
       });
     });
@@ -281,12 +366,20 @@ export const ClockInView = {
         if (savedShift) {
           closeModal();
           alert(`員工「${savedShift.employeeName}」下班成功！\n實際工時：${savedShift.totalHours.toFixed(2)} 小時\n應付工資：${Utils.formatCurrency(savedShift.earnings)}`);
-          window.AppRouter.navigate('history');
+          
+          // 如果身分是員工，結算完後自動登出以策安全，若是管理員則重導回歷史頁
+          const session = Store.getSession();
+          if (session.role === 'employee') {
+            Store.clearSession();
+            window.AppRouter.navigate('login');
+          } else {
+            window.AppRouter.navigate('history');
+          }
         }
       });
     }
 
-    // 更新計時器的定時器核心邏輯
+    // 更新計時器
     const updateActiveTimers = () => {
       const activeShifts = Store.getActiveShifts();
       const now = Date.now();
@@ -294,7 +387,6 @@ export const ClockInView = {
       Object.keys(activeShifts).forEach(empId => {
         const shift = activeShifts[empId];
         
-        // 取得該卡片的計時元素
         const timerEl = document.getElementById(`timer-${empId}`);
         const earningsEl = document.getElementById(`earnings-${empId}`);
         const progressEl = document.getElementById(`progress-bar-${empId}`);
@@ -302,7 +394,6 @@ export const ClockInView = {
 
         if (!timerEl || !earningsEl || !progressEl || !progressTextEl) return;
 
-        // 計算累計休息時間與工作毫秒數
         let currentBreakDuration = shift.totalBreakDuration;
         if (shift.status === 'on_break' && shift.breakStartTime) {
           currentBreakDuration += (now - shift.breakStartTime);
@@ -312,14 +403,10 @@ export const ClockInView = {
         const totalSeconds = Math.floor(totalDurationMs / 1000);
         const totalMinutes = totalDurationMs / 60000;
 
-        // 1. 顯示格式化時間
         timerEl.textContent = Utils.formatDuration(totalDurationMs);
-
-        // 2. 顯示階梯式薪資 (Math.floor(分鐘 / 15) * 50)
         const currentEarnings = Math.floor(totalMinutes / 15) * 50;
         earningsEl.textContent = Utils.formatCurrency(currentEarnings, 0);
 
-        // 3. 計算並更新 15 分鐘計薪進度條
         const currentCycleMins = Math.floor(totalMinutes) % 15;
         const currentCycleSecs = totalSeconds % 60;
         
@@ -331,7 +418,6 @@ export const ClockInView = {
       });
     };
 
-    // 開始定時重新整理（每 100ms 刷新進度條與碼表）
     const activeShifts = Store.getActiveShifts();
     if (Object.keys(activeShifts).length > 0) {
       updateActiveTimers();

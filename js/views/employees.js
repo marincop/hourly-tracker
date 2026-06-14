@@ -84,6 +84,11 @@ export const EmployeesView = {
             </div>
 
             <div class="form-group">
+              <label class="form-label" for="emp-pin">打卡安全 PIN 碼 (4 位數字)</label>
+              <input type="text" id="emp-pin" class="form-input" placeholder="例如：1234 (預設)" pattern="[0-9]{4}" title="請輸入4位數字" maxlength="4">
+            </div>
+
+            <div class="form-group">
               <label class="form-label">指派代表色 (馬卡龍色彩)</label>
               <div class="color-picker-grid">
                 ${colorPickerHtml}
@@ -112,6 +117,7 @@ export const EmployeesView = {
     const empNameInput = document.getElementById('emp-name');
     const empPhoneInput = document.getElementById('emp-phone');
     const empRoleInput = document.getElementById('emp-role');
+    const empPinInput = document.getElementById('emp-pin');
     const editEmpIdInput = document.getElementById('edit-emp-id');
     const formTitle = document.getElementById('form-title');
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
@@ -137,7 +143,8 @@ export const EmployeesView = {
         name: empNameInput.value.trim(),
         phone: empPhoneInput.value.trim(),
         role: empRoleInput.value.trim(),
-        color: selectedColor
+        color: selectedColor,
+        pin: empPinInput.value.trim() || '1234' // 預設 1234
       };
 
       const editId = editEmpIdInput.value;
@@ -166,6 +173,7 @@ export const EmployeesView = {
           empNameInput.value = emp.name;
           empPhoneInput.value = emp.phone || '';
           empRoleInput.value = emp.role;
+          empPinInput.value = emp.pin || '1234';
           selectedColor = emp.color;
 
           // 更新顏色格狀態
@@ -187,6 +195,7 @@ export const EmployeesView = {
     cancelEditBtn.addEventListener('click', () => {
       form.reset();
       editEmpIdInput.value = '';
+      empPinInput.value = ''; // 清除 PIN 欄位
       formTitle.textContent = '新增員工檔案';
       saveEmpBtnSpan.textContent = '確認儲存';
       cancelEditBtn.style.display = 'none';

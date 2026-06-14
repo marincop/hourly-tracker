@@ -1,9 +1,8 @@
 /**
- * LocalStorage / Local Server / Supabase 三軌快取儲存中心 (多員工版)
+ * LocalStorage / Local Server / Supabase 三軌快取儲存中心 (多員工版 - 含 PIN 驗證)
  */
 
 // --- 雲端連線設定區 ---
-// 若使用 Supabase 雲端同步，請填寫此處；若使用「店面 Wi-Fi 本地同步模式」則保持預設即可。
 const SUPABASE_URL = 'https://veoklrkrucgejbscmivy.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_DPg8x_cU4HENRis8v4GpYA_yw6FFmSl';
 
@@ -45,12 +44,12 @@ if (isSupabaseConfigured && window.supabase) {
   }
 }
 
-// --- 本地記憶體快取 (優化 UI 即時讀取) ---
+// --- 本地記憶體快取 ---
 let employeesCache = [];
 let shiftsCache = [];
 let activeShiftsCache = {};
 
-// 初始化同步載入 LocalStorage 快取 (作為最底層備用)
+// 初始化同步載入 LocalStorage 快取
 try {
   const localEmp = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
   employeesCache = localEmp ? JSON.parse(localEmp) : [];
@@ -96,10 +95,9 @@ export const Store = {
   },
 
   /**
-   * 同步資料庫 (支援 Supabase 與本地 API 雙軌)
+   * 與 Supabase 雲端資料庫進行非同步資料同步
    */
   async syncFromCloud() {
-    // 1. 如果已設定 Supabase 雲端
     if (storeMode === 'supabase' && supabaseClient) {
       try {
         const [resEmp, resShifts, resActive] = await Promise.all([
@@ -112,9 +110,16 @@ export const Store = {
         if (resShifts.error) throw resShifts.error;
         if (resActive.error) throw resActive.error;
 
+        // 快取讀入，並保留 pin 欄位
         employeesCache = resEmp.data.map(row => ({
-          id: row.id, name: row.name, phone: row.phone || '', role: row.role || '兼職', color: row.color || '#E8DFF5'
+          id: row.id, 
+          name: row.name, 
+          phone: row.phone || '', 
+          role: row.role || '兼職', 
+          color: row.color || '#E8DFF5',
+          pin: row.pin || '' // 讀取安全 PIN 碼
         }));
+        
         shiftsCache = resShifts.data.map(row => ({
           id: row.id, employeeId: row.employee_id, employeeName: row.employee_name, employeeColor: row.employee_color || '#E8DFF5',
           startTime: row.start_time, endTime: row.end_time, breakDuration: parseInt(row.break_duration) || 0,
@@ -139,7 +144,7 @@ export const Store = {
       }
     }
 
-    // 2. 嘗試與本地的 Ruby API 伺服器進行同步 (Wi-Fi 共享模式)
+    // 嘗試與本地的 Ruby API 伺服器進行同步
     try {
       const response = await fetch('/api/data', { method: 'GET' });
       if (response.ok) {
@@ -150,27 +155,53 @@ export const Store = {
         shiftsCache = db.shifts || [];
         activeShiftsCache = db.active_shifts || {};
         
-        // 修正歷史記錄排序
         shiftsCache.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-        
         saveToLocalStorage();
         return true;
       }
     } catch (err) {
-      // 請求失敗代表不是使用 Ruby API 伺服器載入（例如直接雙擊 index.html 開啟）
+      // 降級
     }
 
-    // 3. 單機 LocalStorage 降級模式
     storeMode = 'local_storage';
     if (employeesCache.length === 0) {
-      // 初始化預設值
       employeesCache = [
-        { id: 'emp-1', name: '陳小明', phone: '0912-345-678', role: '計時店員', color: '#E8DFF5' },
-        { id: 'emp-2', name: '林美玲', phone: '0928-111-222', role: '資深收銀', color: '#D6EAD8' }
+        { id: 'emp-1', name: '陳小明', phone: '0912-345-678', role: '計時店員', color: '#E8DFF5', pin: '1234' },
+        { id: 'emp-2', name: '林美玲', phone: '0928-111-222', role: '資深收銀', color: '#D6EAD8', pin: '5678' }
       ];
       saveToLocalStorage();
     }
     return false;
+  },
+
+  // --- 登入與 Session 狀態管理 ---
+  setSession(role, userId = null) {
+    sessionStorage.setItem('currentRole', role);
+    if (userId) {
+      sessionStorage.setItem('currentUserId', userId);
+    } else {
+      sessionStorage.removeItem('currentUserId');
+    }
+  },
+
+  getSession() {
+    return {
+      role: sessionStorage.getItem('currentRole'),
+      userId: sessionStorage.getItem('currentUserId')
+    };
+  },
+
+  clearSession() {
+    sessionStorage.removeItem('currentRole');
+    sessionStorage.removeItem('currentUserId');
+  },
+
+  getManagerPassword() {
+    return localStorage.getItem('manager_password') || 'admin';
+  },
+
+  setManagerPassword(newPwd) {
+    localStorage.setItem('manager_password', newPwd);
   },
 
   // --- 員工資料管理 (Employees) ---
@@ -190,17 +221,16 @@ export const Store = {
       name: emp.name || '無名員工',
       phone: emp.phone || '',
       role: emp.role || '兼職員工',
-      color: emp.color || MACARON_COLORS[0].value
+      color: emp.color || MACARON_COLORS[0].value,
+      pin: emp.pin || '' // 4位數字密碼
     };
     
     employeesCache.push(newEmp);
-    saveToLocalStorage();
-    saveToLocalServer();
+    this.saveEmployees(employeesCache);
 
-    // Supabase 雲端背景寫入
     if (storeMode === 'supabase' && supabaseClient) {
       supabaseClient.from('employees').insert({
-        id: newEmp.id, name: newEmp.name, phone: newEmp.phone, role: newEmp.role, color: newEmp.color
+        id: newEmp.id, name: newEmp.name, phone: newEmp.phone, role: newEmp.role, color: newEmp.color, pin: newEmp.pin
       }).then(({ error }) => {
         if (error) console.error('Supabase 新增員工失敗:', error);
       });
@@ -232,7 +262,7 @@ export const Store = {
 
     if (storeMode === 'supabase' && supabaseClient) {
       supabaseClient.from('employees').update({
-        name: updatedFields.name, phone: updatedFields.phone, role: updatedFields.role, color: updatedFields.color
+        name: updatedFields.name, phone: updatedFields.phone, role: updatedFields.role, color: updatedFields.color, pin: updatedFields.pin
       }).eq('id', id).then(({ error }) => {
         if (error) console.error('Supabase 更新員工失敗:', error);
       });
@@ -463,16 +493,16 @@ export const Store = {
 
   generateDemoData() {
     const mockEmployees = [
-      { id: 'mock-1', name: '王小明', phone: '0912-111-222', role: '店長', color: '#E8DFF5' },
-      { id: 'mock-2', name: '李美華', phone: '0928-333-444', role: '副店長', color: '#D6EAD8' },
-      { id: 'mock-3', name: '張家豪', phone: '0935-555-666', role: '主廚', color: '#FAD2E1' },
-      { id: 'mock-4', name: '林志玲', phone: '0972-777-888', role: '收銀主管', color: '#BEE3DB' },
-      { id: 'mock-5', name: '陳建宏', phone: '0988-999-000', role: '外送組長', color: '#FFF1C5' },
-      { id: 'mock-6', name: '黃雅婷', phone: '0919-123-456', role: '行銷專員', color: '#FFE5EC' },
-      { id: 'mock-7', name: '曾冠宇', phone: '0933-456-789', role: '理貨助理', color: '#E8F5E9' },
-      { id: 'mock-8', name: '劉德華', phone: '0920-987-654', role: '門市計時', color: '#FFD8BE' },
-      { id: 'mock-9', name: '周杰倫', phone: '0955-654-321', role: '吧台調酒', color: '#E8DFF5' },
-      { id: 'mock-10', name: '蔡依林', phone: '0911-222-333', role: '大廳接待', color: '#BEE3DB' }
+      { id: 'mock-1', name: '王小明', phone: '0912-111-222', role: '店長', color: '#E8DFF5', pin: '1111' },
+      { id: 'mock-2', name: '李美華', phone: '0928-333-444', role: '副店長', color: '#D6EAD8', pin: '2222' },
+      { id: 'mock-3', name: '張家豪', phone: '0935-555-666', role: '主廚', color: '#FAD2E1', pin: '3333' },
+      { id: 'mock-4', name: '林志玲', phone: '0972-777-888', role: '收銀主管', color: '#BEE3DB', pin: '4444' },
+      { id: 'mock-5', name: '陳建宏', phone: '0988-999-000', role: '外送組長', color: '#FFF1C5', pin: '5555' },
+      { id: 'mock-6', name: '黃雅婷', phone: '0919-123-456', role: '行銷專員', color: '#FFE5EC', pin: '6666' },
+      { id: 'mock-7', name: '曾冠宇', phone: '0933-456-789', role: '理貨助理', color: '#E8F5E9', pin: '7777' },
+      { id: 'mock-8', name: '劉德華', phone: '0920-987-654', role: '門市計時', color: '#FFD8BE', pin: '8888' },
+      { id: 'mock-9', name: '周杰倫', phone: '0955-654-321', role: '吧台調酒', color: '#E8DFF5', pin: '9999' },
+      { id: 'mock-10', name: '蔡依林', phone: '0911-222-333', role: '大廳接待', color: '#BEE3DB', pin: '0000' }
     ];
 
     this.saveEmployees(mockEmployees);
@@ -528,7 +558,7 @@ export const Store = {
         supabaseClient.from('employees').delete().neq('id', '')
       ]).then(() => {
         supabaseClient.from('employees').insert(mockEmployees.map(e => ({
-          id: e.id, name: e.name, phone: e.phone, role: e.role, color: e.color
+          id: e.id, name: e.name, phone: e.phone, role: e.role, color: e.color, pin: e.pin
         }))).then(() => {
           const dbShifts = shifts.map(s => ({
             id: s.id, employee_id: s.employeeId, employee_name: s.employeeName, employee_color: s.employeeColor,

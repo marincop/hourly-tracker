@@ -1102,3 +1102,132 @@ a {
     justify-content: center;
   }
 }
+
+/* ==========================================================================
+   員工角色權限樣式覆蓋 (Employee Role Access Styling Overrides)
+   ========================================================================== */
+.role-employee .sidebar,
+.role-employee .mobile-nav {
+  display: none !important;
+}
+
+.role-employee .content-wrapper {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* ==========================================================================
+   登入入口樣式 (Login View Styles)
+   ========================================================================== */
+.login-view-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  width: 100%;
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+.login-portal-card {
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 480px;
+}
+
+.login-portal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* PIN 密碼輸入框 */
+.pin-display-wrapper {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pin-dots-container {
+  display: flex;
+  gap: 1.2rem;
+  margin: 1rem 0;
+}
+
+.pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
+  transition: var(--transition-bounce);
+}
+
+.pin-dot.filled {
+  background-color: var(--text-main);
+  border-color: var(--text-main);
+  transform: scale(1.2);
+}
+
+/* PIN 密碼數字小鍵盤 */
+.pin-keyboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.keypad-btn {
+  height: 52px;
+  width: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+  font-size: 1.35rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-bounce);
+}
+
+.keypad-btn:active {
+  transform: scale(0.9);
+  background: var(--bg-app);
+}
+
+.keypad-btn.action-btn {
+  font-size: 0.9rem;
+  background: rgba(0,0,0,0.03);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  width: auto;
+  height: 52px;
+  border-radius: 99px;
+}
+
+@media (max-width: 768px) {
+  .login-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .login-portal-card {
+    min-height: auto;
+    padding: 1.8rem;
+  }
+}

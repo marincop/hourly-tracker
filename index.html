@@ -14,23 +14,38 @@
     <pre id="debug-error-log" style="margin: 0; white-space: pre-wrap; word-break: break-all;">Console initialized. Waiting for errors...</pre>
   </div>
   <script>
-    window.addEventListener('error', function(e) {
-      var consoleEl = document.getElementById('debug-error-console');
-      var logEl = document.getElementById('debug-error-log');
-      if (consoleEl && logEl) {
-        consoleEl.style.display = 'block';
-        logEl.textContent += '\n\nERROR:\n' + e.message + '\nSource: ' + e.filename + '\nLine: ' + e.lineno + ':' + e.colno;
+    var logEl = document.getElementById('debug-error-log');
+    var consoleEl = document.getElementById('debug-error-console');
+    if (consoleEl) consoleEl.style.display = 'block';
+
+    function logToScreen(type, msg) {
+      if (logEl) {
+        logEl.textContent += '\n[' + type + '] ' + msg;
       }
+    }
+
+    // Capture console logs
+    var originalLog = console.log;
+    console.log = function() {
+      originalLog.apply(console, arguments);
+      var msg = Array.from(arguments).map(x => typeof x === 'object' ? JSON.stringify(x) : x).join(' ');
+      logToScreen('LOG', msg);
+    };
+
+    var originalError = console.error;
+    console.error = function() {
+      originalError.apply(console, arguments);
+      var msg = Array.from(arguments).map(x => typeof x === 'object' ? JSON.stringify(x) : x).join(' ');
+      logToScreen('ERR', msg);
+    };
+
+    window.addEventListener('error', function(e) {
+      logToScreen('UNCAUGHT ERR', e.message + ' at ' + e.filename + ':' + e.lineno);
     });
     window.addEventListener('unhandledrejection', function(e) {
-      var consoleEl = document.getElementById('debug-error-console');
-      var logEl = document.getElementById('debug-error-log');
-      if (consoleEl && logEl) {
-        consoleEl.style.display = 'block';
-        var reason = e.reason;
-        var msg = reason ? (reason.stack || reason.message || JSON.stringify(reason)) : 'Unknown reason';
-        logEl.textContent += '\n\nUNHANDLED PROMISE REJECTION:\n' + msg;
-      }
+      var reason = e.reason;
+      var msg = reason ? (reason.stack || reason.message || JSON.stringify(reason)) : 'Unknown reason';
+      logToScreen('PROMISE REJ', msg);
     });
   </script>
   

@@ -100,11 +100,13 @@ export const Store = {
   async syncFromCloud() {
     if (storeMode === 'supabase' && supabaseClient) {
       try {
+        console.log('Supabase sync started');
         const [resEmp, resShifts, resActive] = await Promise.all([
           supabaseClient.from('employees').select('*'),
           supabaseClient.from('shifts').select('*'),
           supabaseClient.from('active_shifts').select('*')
         ]);
+        console.log('Supabase sync response received. Employees count:', resEmp.data ? resEmp.data.length : 'error', 'Shifts count:', resShifts.data ? resShifts.data.length : 'error');
 
         if (resEmp.error) throw resEmp.error;
         if (resShifts.error) throw resShifts.error;

@@ -5,6 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>小時部打卡管理系統 - Hourly Clock-In Tracker</title>
   
+  <!-- Debug console to display JS errors directly on screen -->
+  <div id="debug-error-console" style="position: fixed; bottom: 10px; right: 10px; z-index: 10000; background: rgba(185, 28, 28, 0.95); color: white; padding: 15px; border-radius: 8px; max-width: 450px; max-height: 300px; overflow: auto; font-family: monospace; font-size: 11px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 2px solid #ef4444; direction: ltr; text-align: left; display: none;">
+    <h4 style="margin: 0 0 8px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 4px; display: flex; justify-content: space-between;">
+      <span>🔴 JS Runtime Error Console</span>
+      <button onclick="this.parentElement.parentElement.style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-weight: bold;">[X]</button>
+    </h4>
+    <pre id="debug-error-log" style="margin: 0; white-space: pre-wrap; word-break: break-all;">Console initialized. Waiting for errors...</pre>
+  </div>
+  <script>
+    window.addEventListener('error', function(e) {
+      var consoleEl = document.getElementById('debug-error-console');
+      var logEl = document.getElementById('debug-error-log');
+      if (consoleEl && logEl) {
+        consoleEl.style.display = 'block';
+        logEl.textContent += '\n\nERROR:\n' + e.message + '\nSource: ' + e.filename + '\nLine: ' + e.lineno + ':' + e.colno;
+      }
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      var consoleEl = document.getElementById('debug-error-console');
+      var logEl = document.getElementById('debug-error-log');
+      if (consoleEl && logEl) {
+        consoleEl.style.display = 'block';
+        var reason = e.reason;
+        var msg = reason ? (reason.stack || reason.message || JSON.stringify(reason)) : 'Unknown reason';
+        logEl.textContent += '\n\nUNHANDLED PROMISE REJECTION:\n' + msg;
+      }
+    });
+  </script>
+  
   <!-- SEO Meta -->
   <meta name="description" content="專為兼職/時薪人員設計的打卡管理系統。提供即時薪水計時器、工作管理、工時與薪資數據分析圖表、歷史班次日曆及報表匯出功能。純本機儲存，免登入，資料不外流。">
   <meta name="keywords" content="打卡管理, 兼職, 時薪計算, 工時統計, 薪資估算, 日曆, CSV匯出">
@@ -105,6 +134,6 @@
   </div>
 
   <!-- 主路由程式 -->
-  <script type="module" src="js/app.js?v=1.0.1"></script>
+  <script type="module" src="js/app.js?v=1.0.2"></script>
 </body>
 </html>

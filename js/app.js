@@ -1,10 +1,10 @@
-import { DashboardView } from './views/dashboard.js';
-import { ClockInView } from './views/clockin.js';
-import { HistoryView } from './views/history.js';
-import { CalendarView } from './views/calendar.js';
-import { EmployeesView } from './views/employees.js';
-import { LoginView } from './views/login.js';
-import { Store } from './store.js';
+import { DashboardView } from './views/dashboard.js?v=1.0.2';
+import { ClockInView } from './views/clockin.js?v=1.0.2';
+import { HistoryView } from './views/history.js?v=1.0.2';
+import { CalendarView } from './views/calendar.js?v=1.0.2';
+import { EmployeesView } from './views/employees.js?v=1.0.2';
+import { LoginView } from './views/login.js?v=1.0.2';
+import { Store } from './store.js?v=1.0.2';
 
 const ROUTES = {
   dashboard: DashboardView,

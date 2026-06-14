@@ -228,7 +228,7 @@ export const HistoryView = {
     if (shiftModalCancel) shiftModalCancel.addEventListener('click', closeModal);
 
     // 表單送出 (新增或編輯)
-    shiftForm.addEventListener('submit', (e) => {
+    shiftForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const empId = shiftEmpId.value;

@@ -139,8 +139,8 @@ export const Store = {
         saveToLocalStorage();
         return true;
       } catch (err) {
-        console.error('Supabase 同步失敗，降級使用本地緩存:', err);
-        return false;
+        console.error('Supabase 同步失敗，將降級使用本地快取/伺服器:', err);
+        storeMode = 'local_storage';
       }
     }
 

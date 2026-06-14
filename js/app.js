@@ -20,17 +20,26 @@ export const AppRouter = {
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
-    window.addEventListener('DOMContentLoaded', () => {
+    
+    // 檢查 document.readyState 以避免 type="module" 腳本載入時已錯過 DOMContentLoaded 事件
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', () => {
+        Store.getEmployees();
+        this.handleRoute();
+      });
+    } else {
       Store.getEmployees();
       this.handleRoute();
-    });
+    }
 
-    document.querySelectorAll('[data-route]').forEach(link => {
-      link.addEventListener('click', (e) => {
+    // 動態綁定現有與未來的導覽列按鈕點擊事件
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('[data-route]');
+      if (link) {
         e.preventDefault();
         const route = link.getAttribute('data-route');
         this.navigate(route);
-      });
+      }
     });
   },
 
@@ -46,8 +55,23 @@ export const AppRouter = {
       routeName = 'clockin';
     }
 
-    // 1. 同步雲端資料庫最新資料
-    await Store.syncFromCloud();
+    // 1. 背景非同步同步雲端資料庫最新資料 (不阻塞換頁，提升 UI 流暢度)
+    Store.syncFromCloud().then((syncSuccess) => {
+      this.updateSyncBanner();
+      
+      // 若資料同步完成後，當前頁面的內容需要重渲染以顯示最新員工/紀錄
+      if (this.currentView === routeName && 
+          ['login', 'clockin', 'jobs', 'history', 'dashboard'].includes(this.currentView)) {
+        const view = ROUTES[this.currentView];
+        const mainContent = document.getElementById('main-content');
+        if (mainContent && view) {
+          mainContent.innerHTML = view.render();
+          view.init();
+        }
+      }
+    }).catch(err => {
+      console.error('背景資料同步失敗:', err);
+    });
 
     // 2. 路由守衛 (Route Guard)
     const session = Store.getSession();

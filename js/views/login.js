@@ -25,14 +25,20 @@ export const LoginView = {
               </h3>
               <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">選擇您的姓名，輸入 PIN 碼完成登入打卡</p>
               
-              <div class="form-group">
+               <div class="form-group">
                 <label class="form-label" for="login-emp-select">選擇您的名字</label>
                 <div class="job-select-wrapper">
-                  <select id="login-emp-select" class="job-select" style="text-align: left; padding-left: 1rem;">
-                    <option value="" disabled selected>請選擇姓名...</option>
+                  <select id="login-emp-select" class="job-select" style="text-align: left; padding-left: 1rem;" ${employees.length === 0 ? 'disabled' : ''}>
+                    <option value="" disabled selected>${employees.length === 0 ? '目前無員工資料' : '請選擇姓名...'}</option>
                     ${employeeOptionsHtml}
                   </select>
                 </div>
+                ${employees.length === 0 ? `
+                  <div style="background: rgba(239, 68, 68, 0.05); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.8rem; border-radius: 8px; font-size: 0.8rem; margin-top: 0.8rem; text-align: left; line-height: 1.5;">
+                    💡 <strong>資料庫連線成功，但目前是空的！</strong><br>
+                    請使用右側的<strong>管理者控制台</strong>，輸入密碼 <code>admin</code> 登入後，到「員工資料管理」中新增員工，或是在儀表板點選「產生測試數據」即可開始打卡！
+                  </div>
+                ` : ''}
               </div>
 
               <!-- PIN 密碼顯示點與小鍵盤 -->

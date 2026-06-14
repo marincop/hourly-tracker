@@ -164,12 +164,17 @@ export const DashboardView = {
     // 綁定產生測試數據按鈕 (即使無打卡記錄也需可用)
     const demoBtn = document.getElementById('generate-demo-btn');
     if (demoBtn) {
-      demoBtn.addEventListener('click', () => {
+      demoBtn.addEventListener('click', async () => {
         const confirmGen = confirm('這會清除您目前所有的員工與打卡資料，並自動為您建立 10 名測試員工以及過去 30 天內（以15分鐘50元計薪）的完整排班打卡紀錄以供圖表展示。\n\n確定要產生測試數據嗎？');
         if (confirmGen) {
-          Store.generateDemoData();
-          alert('測試數據產生成功！網頁即將自動重新整理。');
-          window.location.reload();
+          try {
+            await Store.generateDemoData();
+            alert('測試數據產生成功！網頁即將自動重新整理。');
+            window.location.reload();
+          } catch (err) {
+            console.error('產生測試數據失敗:', err);
+            alert(`產生測試數據失敗！錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
+          }
         }
       });
     }

@@ -136,7 +136,7 @@ export const EmployeesView = {
     });
 
     // 表單提交處理 (新增或編輯)
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const empData = {
@@ -148,15 +148,19 @@ export const EmployeesView = {
       };
 
       const editId = editEmpIdInput.value;
-      if (editId) {
-        Store.updateEmployee(editId, empData);
-        alert('員工資料更新成功！');
-      } else {
-        Store.addEmployee(empData);
-        alert('成功新增員工！');
+      try {
+        if (editId) {
+          await Store.updateEmployee(editId, empData);
+          alert('員工資料更新成功！');
+        } else {
+          await Store.addEmployee(empData);
+          alert('成功新增員工！');
+        }
+        window.AppRouter.navigate('jobs'); // 跳回管理頁面重新載入
+      } catch (err) {
+        console.error('儲存員工失敗:', err);
+        alert(`儲存失敗！請檢查您的 Supabase 資料表是否已執行升級指令 (例如新增 pin 欄位)。\n\n錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
       }
-
-      window.AppRouter.navigate('jobs'); // 跳回管理頁面重新載入
     });
 
     // 編輯員工事件
@@ -209,7 +213,7 @@ export const EmployeesView = {
     // 刪除員工事件
     const deleteBtns = document.querySelectorAll('.delete-emp-btn');
     deleteBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const empId = btn.getAttribute('data-id');
         const employees = Store.getEmployees();
         const emp = employees.find(e => e.id === empId);
@@ -217,8 +221,14 @@ export const EmployeesView = {
         if (emp) {
           const confirmDelete = confirm(`確定要刪除員工「${emp.name}」嗎？\n這將移除其目前的打卡計時狀態，但其歷史打卡記錄將被保留以供薪資核對。`);
           if (confirmDelete) {
-            Store.deleteEmployee(empId);
-            window.AppRouter.navigate('jobs');
+            try {
+              await Store.deleteEmployee(empId);
+              alert('已成功刪除員工！');
+              window.AppRouter.navigate('jobs');
+            } catch (err) {
+              console.error('刪除員工失敗:', err);
+              alert(`刪除失敗！錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
+            }
           }
         }
       });

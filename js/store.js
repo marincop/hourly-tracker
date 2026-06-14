@@ -215,7 +215,7 @@ export const Store = {
     saveToLocalServer();
   },
 
-  addEmployee(emp) {
+  async addEmployee(emp) {
     const newEmp = {
       id: 'emp-' + Date.now(),
       name: emp.name || '無名員工',
@@ -229,17 +229,19 @@ export const Store = {
     this.saveEmployees(employeesCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('employees').insert({
+      const { error } = await supabaseClient.from('employees').insert({
         id: newEmp.id, name: newEmp.name, phone: newEmp.phone, role: newEmp.role, color: newEmp.color, pin: newEmp.pin
-      }).then(({ error }) => {
-        if (error) console.error('Supabase 新增員工失敗:', error);
       });
+      if (error) {
+        console.error('Supabase 新增員工失敗:', error);
+        throw error;
+      }
     }
 
     return newEmp;
   },
 
-  updateEmployee(id, updatedFields) {
+  async updateEmployee(id, updatedFields) {
     employeesCache = employeesCache.map(emp => {
       if (emp.id === id) return { ...emp, ...updatedFields };
       return emp;
@@ -261,27 +263,25 @@ export const Store = {
     saveToLocalServer();
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('employees').update({
-        name: updatedFields.name, phone: updatedFields.phone, role: updatedFields.role, color: updatedFields.color, pin: updatedFields.pin
-      }).eq('id', id).then(({ error }) => {
-        if (error) console.error('Supabase 更新員工失敗:', error);
-      });
+      const [res1, res2, res3] = await Promise.all([
+        supabaseClient.from('employees').update({
+          name: updatedFields.name, phone: updatedFields.phone, role: updatedFields.role, color: updatedFields.color, pin: updatedFields.pin
+        }).eq('id', id),
+        supabaseClient.from('shifts').update({
+          employee_name: updatedFields.name, employee_color: updatedFields.color
+        }).eq('employee_id', id),
+        supabaseClient.from('active_shifts').update({
+          employee_name: updatedFields.name, employee_color: updatedFields.color
+        }).eq('employee_id', id)
+      ]);
 
-      supabaseClient.from('shifts').update({
-        employee_name: updatedFields.name, employee_color: updatedFields.color
-      }).eq('employee_id', id).then(({ error }) => {
-        if (error) console.error('Supabase 歷史關聯同步失敗:', error);
-      });
-
-      supabaseClient.from('active_shifts').update({
-        employee_name: updatedFields.name, employee_color: updatedFields.color
-      }).eq('employee_id', id).then(({ error }) => {
-        if (error) console.error('Supabase 在線狀態關聯同步失敗:', error);
-      });
+      if (res1.error) { console.error('Supabase 更新員工失敗:', res1.error); throw res1.error; }
+      if (res2.error) console.error('Supabase 歷史關聯同步失敗:', res2.error);
+      if (res3.error) console.error('Supabase 在線狀態關聯同步失敗:', res3.error);
     }
   },
 
-  deleteEmployee(id) {
+  async deleteEmployee(id) {
     employeesCache = employeesCache.filter(emp => emp.id !== id);
     if (activeShiftsCache[id]) delete activeShiftsCache[id];
 
@@ -289,9 +289,11 @@ export const Store = {
     saveToLocalServer();
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('employees').delete().eq('id', id).then(({ error }) => {
-        if (error) console.error('Supabase 刪除員工失敗:', error);
-      });
+      const { error } = await supabaseClient.from('employees').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase 刪除員工失敗:', error);
+        throw error;
+      }
     }
   },
 
@@ -307,7 +309,7 @@ export const Store = {
     saveToLocalServer();
   },
 
-  addShift(shift) {
+  async addShift(shift) {
     const newShift = {
       id: 'shift-' + Date.now(),
       employeeId: shift.employeeId,
@@ -325,19 +327,21 @@ export const Store = {
     this.saveShifts(shiftsCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('shifts').insert({
+      const { error } = await supabaseClient.from('shifts').insert({
         id: newShift.id, employee_id: newShift.employeeId, employee_name: newShift.employeeName, employee_color: newShift.employeeColor,
         start_time: newShift.startTime, end_time: newShift.endTime, break_duration: newShift.breakDuration,
         total_hours: newShift.totalHours, earnings: newShift.earnings, note: newShift.note
-      }).then(({ error }) => {
-        if (error) console.error('Supabase 歷史記錄寫入失敗:', error);
       });
+      if (error) {
+        console.error('Supabase 歷史記錄寫入失敗:', error);
+        throw error;
+      }
     }
 
     return newShift;
   },
 
-  updateShift(id, updatedFields) {
+  async updateShift(id, updatedFields) {
     shiftsCache = shiftsCache.map(shift => {
       if (shift.id === id) return { ...shift, ...updatedFields };
       return shift;
@@ -345,24 +349,28 @@ export const Store = {
     this.saveShifts(shiftsCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('shifts').update({
+      const { error } = await supabaseClient.from('shifts').update({
         employee_id: updatedFields.employeeId, employee_name: updatedFields.employeeName, employee_color: updatedFields.employeeColor,
         start_time: updatedFields.startTime, end_time: updatedFields.endTime, break_duration: updatedFields.breakDuration,
         total_hours: updatedFields.totalHours, earnings: updatedFields.earnings, note: updatedFields.note
-      }).eq('id', id).then(({ error }) => {
-        if (error) console.error('Supabase 歷史記錄更新失敗:', error);
-      });
+      }).eq('id', id);
+      if (error) {
+        console.error('Supabase 歷史記錄更新失敗:', error);
+        throw error;
+      }
     }
   },
 
-  deleteShift(id) {
+  async deleteShift(id) {
     shiftsCache = shiftsCache.filter(shift => shift.id !== id);
     this.saveShifts(shiftsCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('shifts').delete().eq('id', id).then(({ error }) => {
-        if (error) console.error('Supabase 歷史記錄刪除失敗:', error);
-      });
+      const { error } = await supabaseClient.from('shifts').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase 歷史記錄刪除失敗:', error);
+        throw error;
+      }
     }
   },
 
@@ -377,7 +385,7 @@ export const Store = {
     saveToLocalServer();
   },
 
-  startClockIn(employeeId) {
+  async startClockIn(employeeId) {
     const employee = employeesCache.find(e => e.id === employeeId);
     if (!employee) return null;
 
@@ -397,19 +405,21 @@ export const Store = {
     this.saveActiveShifts(activeShiftsCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('active_shifts').insert({
+      const { error } = await supabaseClient.from('active_shifts').insert({
         employee_id: newActive.employeeId, employee_name: newActive.employeeName, employee_color: newActive.employeeColor,
         start_time: newActive.startTime, break_start_time: newActive.breakStartTime,
         total_break_duration: newActive.totalBreakDuration, status: newActive.status
-      }).then(({ error }) => {
-        if (error) console.error('Supabase 上班寫入失敗:', error);
       });
+      if (error) {
+        console.error('Supabase 上班寫入失敗:', error);
+        throw error;
+      }
     }
 
     return newActive;
   },
 
-  startBreak(employeeId) {
+  async startBreak(employeeId) {
     const shift = activeShiftsCache[employeeId];
     if (!shift || shift.status !== 'working') return null;
 
@@ -418,17 +428,19 @@ export const Store = {
     this.saveActiveShifts(activeShiftsCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('active_shifts').update({
+      const { error } = await supabaseClient.from('active_shifts').update({
         status: 'on_break', break_start_time: shift.breakStartTime
-      }).eq('employee_id', employeeId).then(({ error }) => {
-        if (error) console.error('Supabase 切換休息失敗:', error);
-      });
+      }).eq('employee_id', employeeId);
+      if (error) {
+        console.error('Supabase 切換休息失敗:', error);
+        throw error;
+      }
     }
 
     return shift;
   },
 
-  endBreak(employeeId) {
+  async endBreak(employeeId) {
     const shift = activeShiftsCache[employeeId];
     if (!shift || shift.status !== 'on_break') return null;
 
@@ -440,17 +452,19 @@ export const Store = {
     this.saveActiveShifts(activeShiftsCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('active_shifts').update({
+      const { error } = await supabaseClient.from('active_shifts').update({
         status: 'working', break_start_time: null, total_break_duration: shift.totalBreakDuration
-      }).eq('employee_id', employeeId).then(({ error }) => {
-        if (error) console.error('Supabase 結束休息失敗:', error);
-      });
+      }).eq('employee_id', employeeId);
+      if (error) {
+        console.error('Supabase 結束休息失敗:', error);
+        throw error;
+      }
     }
 
     return shift;
   },
 
-  stopClockOut(employeeId, note = '') {
+  async stopClockOut(employeeId, note = '') {
     const shift = activeShiftsCache[employeeId];
     if (!shift) return null;
 
@@ -478,20 +492,22 @@ export const Store = {
       note: note
     };
 
-    const savedShift = this.addShift(newShift);
+    const savedShift = await this.addShift(newShift);
     delete activeShiftsCache[employeeId];
     this.saveActiveShifts(activeShiftsCache);
 
     if (storeMode === 'supabase' && supabaseClient) {
-      supabaseClient.from('active_shifts').delete().eq('employee_id', employeeId).then(({ error }) => {
-        if (error) console.error('Supabase 刪除在線狀態失敗:', error);
-      });
+      const { error } = await supabaseClient.from('active_shifts').delete().eq('employee_id', employeeId);
+      if (error) {
+        console.error('Supabase 刪除在線狀態失敗:', error);
+        throw error;
+      }
     }
 
     return savedShift;
   },
 
-  generateDemoData() {
+  async generateDemoData() {
     const mockEmployees = [
       { id: 'mock-1', name: '王小明', phone: '0912-111-222', role: '店長', color: '#E8DFF5', pin: '1111' },
       { id: 'mock-2', name: '李美華', phone: '0928-333-444', role: '副店長', color: '#D6EAD8', pin: '2222' },
@@ -552,24 +568,32 @@ export const Store = {
     this.saveActiveShifts({});
 
     if (storeMode === 'supabase' && supabaseClient) {
-      Promise.all([
-        supabaseClient.from('active_shifts').delete().neq('employee_id', ''),
-        supabaseClient.from('shifts').delete().neq('id', ''),
-        supabaseClient.from('employees').delete().neq('id', '')
-      ]).then(() => {
-        supabaseClient.from('employees').insert(mockEmployees.map(e => ({
+      try {
+        await Promise.all([
+          supabaseClient.from('active_shifts').delete().neq('employee_id', ''),
+          supabaseClient.from('shifts').delete().neq('id', ''),
+          supabaseClient.from('employees').delete().neq('id', '')
+        ]);
+        
+        await supabaseClient.from('employees').insert(mockEmployees.map(e => ({
           id: e.id, name: e.name, phone: e.phone, role: e.role, color: e.color, pin: e.pin
-        }))).then(() => {
-          const dbShifts = shifts.map(s => ({
-            id: s.id, employee_id: s.employeeId, employee_name: s.employeeName, employee_color: s.employeeColor,
-            start_time: s.startTime, end_time: s.endTime, break_duration: s.breakDuration,
-            total_hours: s.totalHours, earnings: s.earnings, note: s.note
-          }));
-          supabaseClient.from('shifts').insert(dbShifts).then(({ error }) => {
-            if (error) console.error('Supabase 批次新增班次失敗:', error);
-          });
-        });
-      });
+        })));
+        
+        const dbShifts = shifts.map(s => ({
+          id: s.id, employee_id: s.employeeId, employee_name: s.employeeName, employee_color: s.employeeColor,
+          start_time: s.startTime, end_time: s.endTime, break_duration: s.breakDuration,
+          total_hours: s.totalHours, earnings: s.earnings, note: s.note
+        }));
+        
+        const { error } = await supabaseClient.from('shifts').insert(dbShifts);
+        if (error) {
+          console.error('Supabase 批次新增班次失敗:', error);
+          throw error;
+        }
+      } catch (err) {
+        console.error('Supabase 產生測試數據失敗:', err);
+        throw err;
+      }
     }
   }
 };

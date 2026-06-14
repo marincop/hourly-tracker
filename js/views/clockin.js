@@ -282,13 +282,18 @@ export const ClockInView = {
     // 綁定各卡片的「上班打卡」按鈕
     const clockinBtns = document.querySelectorAll('.emp-clockin-btn');
     clockinBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const empId = btn.getAttribute('data-id');
         if (!empId) return;
 
-        const started = Store.startClockIn(empId);
-        if (started) {
-          window.AppRouter.navigate('clockin');
+        try {
+          const started = await Store.startClockIn(empId);
+          if (started) {
+            window.AppRouter.navigate('clockin');
+          }
+        } catch (err) {
+          console.error('上班打卡失敗:', err);
+          alert(`上班打卡失敗！錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
         }
       });
     });
@@ -331,18 +336,23 @@ export const ClockInView = {
     // 綁定「休息」按鈕
     const breakBtns = document.querySelectorAll('.toggle-break-btn');
     breakBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const empId = btn.getAttribute('data-id');
         const activeShifts = Store.getActiveShifts();
         const shift = activeShifts[empId];
         if (!shift) return;
 
-        if (shift.status === 'working') {
-          Store.startBreak(empId);
-        } else {
-          Store.endBreak(empId);
+        try {
+          if (shift.status === 'working') {
+            await Store.startBreak(empId);
+          } else {
+            await Store.endBreak(empId);
+          }
+          window.AppRouter.navigate('clockin');
+        } catch (err) {
+          console.error('切換休息狀態失敗:', err);
+          alert(`操作失敗！錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
         }
-        window.AppRouter.navigate('clockin');
       });
     });
 
@@ -356,25 +366,30 @@ export const ClockInView = {
 
     // 模態框確認下班
     if (modalConfirmBtn) {
-      modalConfirmBtn.addEventListener('click', () => {
+      modalConfirmBtn.addEventListener('click', async () => {
         const empId = modalEmpId.value;
         const noteText = clockoutNote.value.trim();
 
         if (!empId) return;
 
-        const savedShift = Store.stopClockOut(empId, noteText);
-        if (savedShift) {
-          closeModal();
-          alert(`員工「${savedShift.employeeName}」下班成功！\n實際工時：${savedShift.totalHours.toFixed(2)} 小時\n應付工資：${Utils.formatCurrency(savedShift.earnings)}`);
-          
-          // 如果身分是員工，結算完後自動登出以策安全，若是管理員則重導回歷史頁
-          const session = Store.getSession();
-          if (session.role === 'employee') {
-            Store.clearSession();
-            window.AppRouter.navigate('login');
-          } else {
-            window.AppRouter.navigate('history');
+        try {
+          const savedShift = await Store.stopClockOut(empId, noteText);
+          if (savedShift) {
+            closeModal();
+            alert(`員工「${savedShift.employeeName}」下班成功！\n實際工時：${savedShift.totalHours.toFixed(2)} 小時\n應付工資：${Utils.formatCurrency(savedShift.earnings)}`);
+            
+            // 如果身分是員工，結算完後自動登出以策安全，若是管理員則重導回歷史頁
+            const session = Store.getSession();
+            if (session.role === 'employee') {
+              Store.clearSession();
+              window.AppRouter.navigate('login');
+            } else {
+              window.AppRouter.navigate('history');
+            }
           }
+        } catch (err) {
+          console.error('下班打卡結算失敗:', err);
+          alert(`下班結算失敗！錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
         }
       });
     }

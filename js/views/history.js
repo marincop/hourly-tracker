@@ -270,16 +270,20 @@ export const HistoryView = {
       };
 
       const id = editShiftId.value;
-      if (id) {
-        Store.updateShift(id, shiftData);
-        alert('打卡記錄修改成功！');
-      } else {
-        Store.addShift(shiftData);
-        alert('班次補登成功！');
+      try {
+        if (id) {
+          await Store.updateShift(id, shiftData);
+          alert('打卡記錄修改成功！');
+        } else {
+          await Store.addShift(shiftData);
+          alert('班次補登成功！');
+        }
+        closeModal();
+        window.AppRouter.navigate('history');
+      } catch (err) {
+        console.error('儲存紀錄失敗:', err);
+        alert(`儲存失敗！錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
       }
-
-      closeModal();
-      window.AppRouter.navigate('history');
     });
 
     // 點擊編輯記錄
@@ -311,15 +315,21 @@ export const HistoryView = {
     // 點擊刪除記錄
     const deleteBtns = document.querySelectorAll('.delete-shift-btn');
     deleteBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
         const shift = Store.getShifts().find(s => s.id === id);
 
         if (shift) {
           const confirmDelete = confirm(`確定要刪除員工「${shift.employeeName}」這筆在 ${Utils.formatDate(shift.startTime, 'YYYY-MM-DD')} 的打卡記錄嗎？`);
           if (confirmDelete) {
-            Store.deleteShift(id);
-            window.AppRouter.navigate('history');
+            try {
+              await Store.deleteShift(id);
+              alert('已成功刪除記錄！');
+              window.AppRouter.navigate('history');
+            } catch (err) {
+              console.error('刪除紀錄失敗:', err);
+              alert(`刪除失敗！錯誤訊息：${err.message || err.details || JSON.stringify(err)}`);
+            }
           }
         }
       });

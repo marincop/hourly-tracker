@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小時部打卡管理系統 - Hourly Clock-In Tracker</title>
+  
+  <!-- SEO Meta -->
+  <meta name="description" content="專為兼職/時薪人員設計的打卡管理系統。提供即時薪水計時器、工作管理、工時與薪資數據分析圖表、歷史班次日曆及報表匯出功能。純本機儲存，免登入，資料不外流。">
+  <meta name="keywords" content="打卡管理, 兼職, 時薪計算, 工時統計, 薪資估算, 日曆, CSV匯出">
+  
+  <!-- Google Fonts - Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- 全域樣式 -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Chart.js CDN for beautiful analytics graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Lucide Icons for clean aesthetic vector icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <div id="app">
+    <!-- 1. 側邊欄導覽 (僅桌機顯示) -->
+    <aside class="sidebar">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <i data-lucide="clock-3" style="width: 24px; height: 24px; color: #2D3142;"></i>
+        </div>
+        <span class="logo-text">小時部打卡</span>
+      </div>
+      
+      <nav style="flex-grow: 1;">
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a href="#/clockin" class="nav-link" data-route="clockin" id="nav-link-clockin">
+              <i data-lucide="power" style="width: 20px; height: 20px;"></i>
+              即時打卡計時
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#/dashboard" class="nav-link" data-route="dashboard" id="nav-link-dashboard">
+              <i data-lucide="pie-chart" style="width: 20px; height: 20px;"></i>
+              數據分析儀表板
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#/history" class="nav-link" data-route="history" id="nav-link-history">
+              <i data-lucide="history" style="width: 20px; height: 20px;"></i>
+              打卡記錄歷史
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#/jobs" class="nav-link" data-route="jobs" id="nav-link-jobs">
+              <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+              員工資料管理
+            </a>
+          </li>
+        </ul>
+      </nav>
+      
+      <div class="nav-footer">
+        <p>© 2026 員工打卡管理</p>
+        <p style="font-size: 0.7rem; margin-top: 0.2rem;">本機儲存 • 安全隱私</p>
+      </div>
+    </aside>
+
+    <!-- 2. 右側主要顯示區（含狀態通知條與頁面內容） -->
+    <div class="content-wrapper" style="flex-grow: 1; margin-left: 260px; width: calc(100% - 260px); display: flex; flex-direction: column; min-height: 100vh;">
+      <div id="sync-warning-banner" style="display: none; padding: 0.6rem 2.5rem; font-size: 0.85rem; font-weight: 600; text-align: center; border-bottom: 1px solid var(--border-light); z-index: 90;">
+        <!-- 動態填入雲端或本地狀態 -->
+      </div>
+      <main class="main-content" id="main-content" style="margin-left: 0; width: 100%; padding-top: 1.5rem; flex-grow: 1;">
+        <!-- SPA 視圖內容會在此動態渲染 -->
+      </main>
+    </div>
+
+    <!-- 3. 行動版底部導覽列 (僅手機/平板顯示) -->
+    <nav class="mobile-nav">
+      <a href="#/clockin" class="mobile-nav-link" data-route="clockin">
+        <i data-lucide="power" style="width: 20px; height: 20px;"></i>
+        打卡計時
+      </a>
+      <a href="#/dashboard" class="mobile-nav-link" data-route="dashboard">
+        <i data-lucide="pie-chart" style="width: 20px; height: 20px;"></i>
+        儀表板
+      </a>
+      <a href="#/history" class="mobile-nav-link" data-route="history">
+        <i data-lucide="history" style="width: 20px; height: 20px;"></i>
+        歷史記錄
+      </a>
+      <a href="#/jobs" class="mobile-nav-link" data-route="jobs">
+        <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+        員工管理
+      </a>
+    </nav>
+  </div>
+
+  <!-- 主路由程式 -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

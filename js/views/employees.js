@@ -62,49 +62,78 @@ export const EmployeesView = {
           </div>
         </div>
 
-        <!-- 右側：新增/編輯員工表單 -->
-        <div class="glass-card job-form-card">
-          <h3 id="form-title" style="margin-bottom: 1.5rem; font-weight: 700;">新增員工檔案</h3>
-          <form id="emp-setup-form">
-            <input type="hidden" id="edit-emp-id" value="">
-            
-            <div class="form-group">
-              <label class="form-label" for="emp-name">員工姓名</label>
-              <input type="text" id="emp-name" class="form-input" placeholder="例如：張小明" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="emp-phone">聯絡電話</label>
-              <input type="tel" id="emp-phone" class="form-input" placeholder="例如：0912-345-678">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="emp-role">職位或部門</label>
-              <input type="text" id="emp-role" class="form-input" placeholder="例如：計時人員、廚房助理、收銀員" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="emp-pin">打卡安全 PIN 碼 (4 位數字)</label>
-              <input type="text" id="emp-pin" class="form-input" placeholder="例如：1234 (預設)" pattern="[0-9]{4}" title="請輸入4位數字" maxlength="4">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">指派代表色 (馬卡龍色彩)</label>
-              <div class="color-picker-grid">
-                ${colorPickerHtml}
+        <!-- 右側：新增/編輯員工表單與管理者密碼變更 -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+          <!-- 員工表單 -->
+          <div class="glass-card job-form-card">
+            <h3 id="form-title" style="margin-bottom: 1.5rem; font-weight: 700;">新增員工檔案</h3>
+            <form id="emp-setup-form">
+              <input type="hidden" id="edit-emp-id" value="">
+              
+              <div class="form-group">
+                <label class="form-label" for="emp-name">員工姓名</label>
+                <input type="text" id="emp-name" class="form-input" placeholder="例如：張小明" required>
               </div>
-            </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-              <button type="submit" id="save-emp-btn" class="btn btn-primary" style="flex-grow: 1;">
-                <i data-lucide="check" style="width: 18px; height: 18px;"></i>
-                <span>確認儲存</span>
+              <div class="form-group">
+                <label class="form-label" for="emp-phone">聯絡電話</label>
+                <input type="tel" id="emp-phone" class="form-input" placeholder="例如：0912-345-678">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="emp-role">職位或部門</label>
+                <input type="text" id="emp-role" class="form-input" placeholder="例如：計時人員、廚房助理、收銀員" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="emp-pin">打卡安全 PIN 碼 (4 位數字)</label>
+                <input type="text" id="emp-pin" class="form-input" placeholder="例如：1234 (預設)" pattern="[0-9]{4}" title="請輸入4位數字" maxlength="4">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">指派代表色 (馬卡龍色彩)</label>
+                <div class="color-picker-grid">
+                  ${colorPickerHtml}
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" id="save-emp-btn" class="btn btn-primary" style="flex-grow: 1;">
+                  <i data-lucide="check" style="width: 18px; height: 18px;"></i>
+                  <span>確認儲存</span>
+                </button>
+                <button type="button" id="cancel-edit-btn" class="btn btn-secondary" style="display: none;">
+                  取消編輯
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- 修改管理密碼卡片 -->
+          <div class="glass-card" style="padding: 1.8rem 1.5rem;">
+            <h3 style="margin-bottom: 1.2rem; font-weight: 700; color: #a83c3c; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
+              <i data-lucide="key-round" style="width: 20px; height: 20px;"></i>
+              修改管理者控制台密碼
+            </h3>
+            <form id="change-admin-pwd-form">
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" for="current-admin-pwd">目前管理者密碼</label>
+                <input type="password" id="current-admin-pwd" class="form-input" placeholder="請輸入目前密碼" required style="letter-spacing: 2px;">
+              </div>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" for="new-admin-pwd">設定新管理者密碼</label>
+                <input type="password" id="new-admin-pwd" class="form-input" placeholder="請輸入新密碼" required style="letter-spacing: 2px;">
+              </div>
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label" for="confirm-admin-pwd">確認新密碼</label>
+                <input type="password" id="confirm-admin-pwd" class="form-input" placeholder="再次確認新密碼" required style="letter-spacing: 2px;">
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--macaron-pink), #ffb3c1); font-weight: 700; color: #5c1818;">
+                <i data-lucide="check-circle" style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 0.2rem;"></i>
+                確認變更密碼
               </button>
-              <button type="button" id="cancel-edit-btn" class="btn btn-secondary" style="display: none;">
-                取消編輯
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
     `;
@@ -233,5 +262,36 @@ export const EmployeesView = {
         }
       });
     });
+
+    // 管理者密碼變更表單提交處理
+    const changePwdForm = document.getElementById('change-admin-pwd-form');
+    if (changePwdForm) {
+      changePwdForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const currentPwd = document.getElementById('current-admin-pwd').value;
+        const newPwd = document.getElementById('new-admin-pwd').value;
+        const confirmPwd = document.getElementById('confirm-admin-pwd').value;
+
+        const correctPwd = Store.getManagerPassword();
+        if (currentPwd !== correctPwd) {
+          alert('舊管理密碼輸入錯誤，請再試一次！');
+          return;
+        }
+
+        if (newPwd.length < 4) {
+          alert('新管理密碼長度不能小於 4 個字元！');
+          return;
+        }
+
+        if (newPwd !== confirmPwd) {
+          alert('新管理密碼與確認新密碼不相同，請重新輸入！');
+          return;
+        }
+
+        Store.setManagerPassword(newPwd);
+        alert('管理者密碼已成功變更！新密碼已即時生效。');
+        changePwdForm.reset();
+      });
+    }
   }
 };

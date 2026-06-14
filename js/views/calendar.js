@@ -1,5 +1,5 @@
-import { Store } from '../store.js';
-import { Utils } from '../utils.js';
+import { Store } from '../store.js?v=1.0.3';
+import { Utils } from '../utils.js?v=1.0.3';
 
 export const CalendarView = {
   currentDate: new Date(),

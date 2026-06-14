@@ -1,4 +1,4 @@
-import { Store, MACARON_COLORS } from '../store.js';
+import { Store, MACARON_COLORS } from '../store.js?v=1.0.3';
 
 export const EmployeesView = {
   render() {

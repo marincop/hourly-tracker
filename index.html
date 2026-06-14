@@ -3,8 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>小時部打卡管理系統 - Hourly Clock-In Tracker</title>
+  <title>蘇記豬肚雞中和環球概念店 - 員工打卡管理系統</title>
   
+  <!-- CSS & JavaScript packages -->
+  
+  <!-- SEO Meta -->
+  <meta name="description" content="專為兼職/時薪人員設計的打卡管理系統。提供即時薪水計時器、工作管理、工時與薪資數據分析圖表、歷史班次日曆及報表匯出功能。純本機儲存，免登入，資料不外流。">
+  <meta name="keywords" content="打卡管理, 兼職, 時薪計算, 工時統計, 薪資估算, 日曆, CSV匯出">
+  
+  <!-- Google Fonts - Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- 全域樣式 -->
+  <link rel="stylesheet" href="css/style.css?v=1.0.3">
+  
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Chart.js CDN for beautiful analytics graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Lucide Icons for clean aesthetic vector icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
   <!-- Debug console to display JS errors directly on screen -->
   <div id="debug-error-console" style="position: fixed; bottom: 10px; right: 10px; z-index: 10000; background: rgba(185, 28, 28, 0.95); color: white; padding: 15px; border-radius: 8px; max-width: 450px; max-height: 300px; overflow: auto; font-family: monospace; font-size: 11px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 2px solid #ef4444; direction: ltr; text-align: left; display: none;">
     <h4 style="margin: 0 0 8px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 4px; display: flex; justify-content: space-between;">
@@ -16,11 +40,13 @@
   <script>
     var logEl = document.getElementById('debug-error-log');
     var consoleEl = document.getElementById('debug-error-console');
-    if (consoleEl) consoleEl.style.display = 'block';
 
     function logToScreen(type, msg) {
       if (logEl) {
         logEl.textContent += '\n[' + type + '] ' + msg;
+      }
+      if (type === 'ERR' || type === 'UNCAUGHT ERR' || type === 'PROMISE REJ') {
+        if (consoleEl) consoleEl.style.display = 'block';
       }
     }
 
@@ -48,38 +74,21 @@
       logToScreen('PROMISE REJ', msg);
     });
   </script>
-  
-  <!-- SEO Meta -->
-  <meta name="description" content="專為兼職/時薪人員設計的打卡管理系統。提供即時薪水計時器、工作管理、工時與薪資數據分析圖表、歷史班次日曆及報表匯出功能。純本機儲存，免登入，資料不外流。">
-  <meta name="keywords" content="打卡管理, 兼職, 時薪計算, 工時統計, 薪資估算, 日曆, CSV匯出">
-  
-  <!-- Google Fonts - Outfit & Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- 全域樣式 -->
-  <link rel="stylesheet" href="css/style.css?v=1.0.1">
-  
-  <!-- Supabase JS Client SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- Chart.js CDN for beautiful analytics graphs -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <!-- Lucide Icons for clean aesthetic vector icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body>
+
+  <!-- 頁面左上角懸浮商標 (僅在側邊欄隱藏時顯示，如登入或員工打卡頁面) -->
+  <div class="mobile-top-bar" id="mobile-top-logo" style="display: none; align-items: center; gap: 0.8rem; padding: 1rem 1.5rem; position: fixed; top: 0; left: 0; z-index: 1000; pointer-events: none;">
+    <img src="logo.jpg" alt="蘇記豬肚雞" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.15); border: 2px solid white;">
+    <span style="font-family: 'Outfit', 'Inter', sans-serif; font-weight: 700; color: var(--text-main); font-size: 1.05rem; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">蘇記豬肚雞中和環球概念店</span>
+  </div>
 
   <div id="app">
     <!-- 1. 側邊欄導覽 (僅桌機顯示) -->
     <aside class="sidebar">
       <div class="logo-container">
         <div class="logo-icon">
-          <i data-lucide="clock-3" style="width: 24px; height: 24px; color: #2D3142;"></i>
+          <img src="logo.jpg" alt="蘇記豬肚雞" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
         </div>
-        <span class="logo-text">小時部打卡</span>
+        <span class="logo-text">蘇記豬肚雞</span>
       </div>
       
       <nav style="flex-grow: 1;">
@@ -149,6 +158,6 @@
   </div>
 
   <!-- 主路由程式 -->
-  <script type="module" src="js/app.js?v=1.0.2"></script>
+  <script type="module" src="js/app.js?v=1.0.3"></script>
 </body>
 </html>

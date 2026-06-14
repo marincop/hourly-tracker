@@ -1,4 +1,4 @@
-import { Store } from '../store.js';
+import { Store } from '../store.js?v=1.0.3';
 
 export const LoginView = {
   enteredPin: '',
@@ -14,7 +14,15 @@ export const LoginView = {
 
     return `
       <div class="login-view-wrapper">
-        <div class="login-grid">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 900px; padding: 2rem 1rem;">
+          <!-- 中央大商標與標題 -->
+          <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 2.5rem; text-align: center;">
+            <img src="logo.jpg" alt="蘇記豬肚雞" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.12); border: 3px solid white; margin-bottom: 1.2rem;">
+            <h2 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 2.2rem; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.05);">蘇記豬肚雞</h2>
+            <span style="font-size: 1.1rem; font-weight: 600; color: var(--text-muted); margin-top: 0.4rem; letter-spacing: 0.5px;">中和環球概念店</span>
+          </div>
+
+          <div class="login-grid" style="width: 100%;">
           
           <!-- 左側：員工打卡入口 -->
           <div class="glass-card login-portal-card" style="--job-color: var(--macaron-blue);">
@@ -101,6 +109,7 @@ export const LoginView = {
             </div>
           </div>
 
+          </div>
         </div>
       </div>
     `;

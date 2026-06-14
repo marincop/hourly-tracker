@@ -1,10 +1,10 @@
-import { DashboardView } from './views/dashboard.js?v=1.0.2';
-import { ClockInView } from './views/clockin.js?v=1.0.2';
-import { HistoryView } from './views/history.js?v=1.0.2';
-import { CalendarView } from './views/calendar.js?v=1.0.2';
-import { EmployeesView } from './views/employees.js?v=1.0.2';
-import { LoginView } from './views/login.js?v=1.0.2';
-import { Store } from './store.js?v=1.0.2';
+import { DashboardView } from './views/dashboard.js?v=1.0.3';
+import { ClockInView } from './views/clockin.js?v=1.0.3';
+import { HistoryView } from './views/history.js?v=1.0.3';
+import { CalendarView } from './views/calendar.js?v=1.0.3';
+import { EmployeesView } from './views/employees.js?v=1.0.3';
+import { LoginView } from './views/login.js?v=1.0.3';
+import { Store } from './store.js?v=1.0.3';
 
 const ROUTES = {
   dashboard: DashboardView,
@@ -94,11 +94,23 @@ export const AppRouter = {
 
     // 3. 更新介面權限遮罩樣式 (員工身分或登入頁皆隱藏導覽列)
     const appEl = document.getElementById('app');
+    const topLogoEl = document.getElementById('mobile-top-logo');
     if (appEl) {
       if (session.role === 'employee' || routeName === 'login') {
         appEl.classList.add('role-employee');
+        if (topLogoEl) {
+          if (routeName === 'login') {
+            topLogoEl.style.display = 'none';
+            appEl.classList.remove('has-top-logo');
+          } else {
+            topLogoEl.style.display = 'flex';
+            appEl.classList.add('has-top-logo');
+          }
+        }
       } else {
         appEl.classList.remove('role-employee');
+        appEl.classList.remove('has-top-logo');
+        if (topLogoEl) topLogoEl.style.display = 'none';
       }
     }
 
